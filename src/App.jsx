@@ -1,8 +1,42 @@
 import { useState, useEffect } from 'react'
+import { Sun, Moon, Plus } from 'lucide-react'
 import { supabase, isConfigured } from './lib/supabase'
-import './App.css'
+import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table'
 
-function AddListingModal({ onAdd, onClose }) {
+function useTheme() {
+  const [theme, setTheme] = useState(
+    () => localStorage.getItem('theme') || 'light'
+  )
+
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('dark', theme === 'dark')
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
+}
+
+function AddListingDialog({ open, onOpenChange, onAdd }) {
   const [form, setForm] = useState({ name: '', description: '', price: '' })
   const [saving, setSaving] = useState(false)
 
@@ -12,25 +46,41 @@ function AddListingModal({ onAdd, onClose }) {
     e.preventDefault()
     setSaving(true)
     await onAdd({ ...form, price: parseFloat(form.price) })
+    setForm({ name: '', description: '', price: '' })
     setSaving(false)
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()}>
-        <h2>Add New Listing</h2>
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Item Name *</label>
-            <input value={form.name} onChange={set('name')} placeholder="e.g. Blue Sofa" required />
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Add New Listing</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="name">Item Name *</Label>
+            <Input
+              id="name"
+              value={form.name}
+              onChange={set('name')}
+              placeholder="e.g. Blue Sofa"
+              required
+            />
           </div>
-          <div className="form-group">
-            <label>Description</label>
-            <textarea value={form.description} onChange={set('description')} placeholder="Condition, size, colour, etc." />
+          <div className="space-y-1.5">
+            <Label htmlFor="desc">Description</Label>
+            <Textarea
+              id="desc"
+              value={form.description}
+              onChange={set('description')}
+              placeholder="Condition, size, colour, etc."
+              rows={3}
+            />
           </div>
-          <div className="form-group">
-            <label>Asking Price ($) *</label>
-            <input
+          <div className="space-y-1.5">
+            <Label htmlFor="price">Asking Price ($) *</Label>
+            <Input
+              id="price"
               type="number"
               min="0"
               step="0.01"
@@ -40,22 +90,39 @@ function AddListingModal({ onAdd, onClose }) {
               required
             />
           </div>
-          <div className="modal-actions">
-            <button type="button" className="btn-cancel" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={saving}>
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={saving}>
               {saving ? 'Adding…' : 'Add Listing'}
-            </button>
+            </Button>
           </div>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function StatusBadge({ status }) {
+  return (
+    <span
+      className="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium"
+      style={{
+        background: status === 'active' ? 'var(--badge-active-bg)' : 'var(--badge-sold-bg)',
+        color: status === 'active' ? 'var(--badge-active-fg)' : 'var(--badge-sold-fg)',
+      }}
+    >
+      {status === 'active' ? 'Active' : 'Sold'}
+    </span>
   )
 }
 
 export default function App() {
+  const [theme, toggleTheme] = useTheme()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showModal, setShowModal] = useState(false)
+  const [showDialog, setShowDialog] = useState(false)
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
@@ -78,7 +145,7 @@ export default function App() {
       .select()
     if (data) {
       setListings((prev) => [data[0], ...prev])
-      setShowModal(false)
+      setShowDialog(false)
     }
   }
 
@@ -94,80 +161,123 @@ export default function App() {
     .reduce((sum, l) => sum + parseFloat(l.price), 0)
 
   return (
-    <div className="app">
-      <header>
-        <h1>Marketplace Tracker</h1>
-        {isConfigured && (
-          <button className="btn-primary" onClick={() => setShowModal(true)}>
-            + Add Listing
-          </button>
+    <div className="min-h-screen bg-background">
+      <div className="max-w-4xl mx-auto px-4 py-8">
+
+        {/* Header */}
+        <div className="flex items-center justify-between mb-8">
+          <h1 className="text-2xl font-semibold tracking-tight">Marketplace Tracker</h1>
+          <div className="flex items-center gap-2">
+            {isConfigured && (
+              <Button onClick={() => setShowDialog(true)}>
+                <Plus className="w-4 h-4 mr-1.5" />
+                Add Listing
+              </Button>
+            )}
+            <Button variant="outline" size="icon" onClick={toggleTheme} aria-label="Toggle theme">
+              {theme === 'dark' ? <Sun className="w-4 h-4" /> : <Moon className="w-4 h-4" />}
+            </Button>
+          </div>
+        </div>
+
+        {/* Setup notice */}
+        {!isConfigured && (
+          <div className="mb-6 rounded-lg border border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-950/40 px-4 py-3 text-sm text-yellow-800 dark:text-yellow-300">
+            <strong>Setup required:</strong> Add <code className="font-mono">VITE_SUPABASE_URL</code> and{' '}
+            <code className="font-mono">VITE_SUPABASE_ANON_KEY</code> to your environment variables.
+          </div>
         )}
-      </header>
 
-      {!isConfigured && (
-        <div className="setup-notice">
-          <strong>Setup required:</strong> Add <code>VITE_SUPABASE_URL</code> and{' '}
-          <code>VITE_SUPABASE_ANON_KEY</code> to your environment variables to get started.
+        {/* Stats */}
+        <div className="grid grid-cols-3 gap-4 mb-8">
+          <Card>
+            <CardHeader className="pb-1 pt-4 px-5">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Active Listings
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-4">
+              <p className="text-3xl font-bold">{activeCount}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1 pt-4 px-5">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Sold
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-4">
+              <p className="text-3xl font-bold">{soldCount}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1 pt-4 px-5">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
+                Total Earned
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="px-5 pb-4">
+              <p className="text-3xl font-bold text-primary">${totalEarned.toFixed(2)}</p>
+            </CardContent>
+          </Card>
         </div>
-      )}
 
-      <div className="stats">
-        <div className="stat-card">
-          <div className="label">Active Listings</div>
-          <div className="value">{activeCount}</div>
-        </div>
-        <div className="stat-card">
-          <div className="label">Sold</div>
-          <div className="value">{soldCount}</div>
-        </div>
-        <div className="stat-card earned">
-          <div className="label">Total Earned</div>
-          <div className="value">${totalEarned.toFixed(2)}</div>
-        </div>
+        {/* Listings table */}
+        <Card>
+          <CardContent className="p-0">
+            {loading ? (
+              <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>
+            ) : listings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12 text-sm">
+                No listings yet. Add your first item!
+              </p>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Item</TableHead>
+                    <TableHead>Description</TableHead>
+                    <TableHead>Price</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead />
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {listings.map((listing) => (
+                    <TableRow key={listing.id}>
+                      <TableCell className="font-medium">{listing.name}</TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                        {listing.description || '—'}
+                      </TableCell>
+                      <TableCell>${parseFloat(listing.price).toFixed(2)}</TableCell>
+                      <TableCell>
+                        <StatusBadge status={listing.status} />
+                      </TableCell>
+                      <TableCell className="text-right">
+                        {listing.status === 'active' && (
+                          <Button
+                            variant="outline"
+                            onClick={() => markAsSold(listing.id)}
+                          >
+                            Mark as Sold
+                          </Button>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
       </div>
 
-      <div className="table-wrapper">
-        {loading ? (
-          <div className="empty">Loading…</div>
-        ) : listings.length === 0 ? (
-          <div className="empty">No listings yet. Add your first item!</div>
-        ) : (
-          <table>
-            <thead>
-              <tr>
-                <th>Item</th>
-                <th>Description</th>
-                <th>Price</th>
-                <th>Status</th>
-                <th></th>
-              </tr>
-            </thead>
-            <tbody>
-              {listings.map((listing) => (
-                <tr key={listing.id}>
-                  <td><strong>{listing.name}</strong></td>
-                  <td className="desc">{listing.description || '—'}</td>
-                  <td>${parseFloat(listing.price).toFixed(2)}</td>
-                  <td>
-                    <span className={`badge ${listing.status}`}>
-                      {listing.status === 'active' ? 'Active' : 'Sold'}
-                    </span>
-                  </td>
-                  <td>
-                    {listing.status === 'active' && (
-                      <button className="btn-sold" onClick={() => markAsSold(listing.id)}>
-                        Mark as Sold
-                      </button>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-      </div>
-
-      {showModal && <AddListingModal onAdd={addListing} onClose={() => setShowModal(false)} />}
+      <AddListingDialog
+        open={showDialog}
+        onOpenChange={setShowDialog}
+        onAdd={addListing}
+      />
     </div>
   )
 }
