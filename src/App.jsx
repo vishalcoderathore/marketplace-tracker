@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Sun, Moon, Plus, Trash2 } from 'lucide-react'
+import { Sun, Moon, Plus, Trash2, Pencil } from 'lucide-react'
 import { supabase, isConfigured } from './lib/supabase'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,19 +27,23 @@ function useTheme() {
   const [theme, setTheme] = useState(
     () => localStorage.getItem('theme') || 'light'
   )
-
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem('theme', theme)
   }, [theme])
-
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—'
+  return new Date(dateStr).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  })
 }
 
 function AddListingDialog({ open, onOpenChange, onAdd }) {
   const [form, setForm] = useState({ name: '', description: '', price: '' })
   const [saving, setSaving] = useState(false)
-
   const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
 
   const handleSubmit = async (e) => {
@@ -72,6 +76,75 @@ function AddListingDialog({ open, onOpenChange, onAdd }) {
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
             <Button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add Listing'}</Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function EditListingDialog({ listing, priceHistory, loadingHistory, onSave, onClose }) {
+  const [form, setForm] = useState({ name: '', description: '', price: '' })
+  const [saving, setSaving] = useState(false)
+  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+
+  useEffect(() => {
+    if (listing) {
+      setForm({
+        name: listing.name,
+        description: listing.description || '',
+        price: parseFloat(listing.price).toFixed(2),
+      })
+    }
+  }, [listing])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setSaving(true)
+    await onSave(listing.id, form, listing.price)
+    setSaving(false)
+  }
+
+  return (
+    <Dialog open={!!listing} onOpenChange={(open) => { if (!open) onClose() }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Edit Listing</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-name">Item Name *</Label>
+            <Input id="edit-name" value={form.name} onChange={set('name')} required />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-desc">Description</Label>
+            <Textarea id="edit-desc" value={form.description} onChange={set('description')} rows={3} />
+          </div>
+          <div className="space-y-1.5">
+            <Label htmlFor="edit-price">Price ($) *</Label>
+            <Input id="edit-price" type="number" min="0" step="0.01" value={form.price} onChange={set('price')} required />
+          </div>
+
+          {/* Price history */}
+          {loadingHistory ? (
+            <p className="text-sm text-muted-foreground">Loading history…</p>
+          ) : priceHistory.length > 0 && (
+            <div className="space-y-1.5">
+              <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Price History</p>
+              <div className="rounded-lg border border-border divide-y divide-border">
+                {priceHistory.map((entry) => (
+                  <div key={entry.id} className="flex items-center justify-between px-3 py-2">
+                    <s className="text-muted-foreground">${parseFloat(entry.price).toFixed(2)}</s>
+                    <span className="text-sm text-muted-foreground">{formatDate(entry.recorded_at)}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex justify-end gap-2 pt-2">
+            <Button type="button" variant="outline" onClick={onClose}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving ? 'Saving…' : 'Save Changes'}</Button>
           </div>
         </form>
       </DialogContent>
@@ -139,6 +212,9 @@ export default function App() {
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [listingToDelete, setListingToDelete] = useState(null)
+  const [listingToEdit, setListingToEdit] = useState(null)
+  const [priceHistory, setPriceHistory] = useState([])
+  const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
@@ -165,6 +241,45 @@ export default function App() {
     }
   }
 
+  async function openEditDialog(listing) {
+    setListingToEdit(listing)
+    setLoadingHistory(true)
+    const { data } = await supabase
+      .from('price_history')
+      .select('*')
+      .eq('listing_id', listing.id)
+      .order('recorded_at', { ascending: false })
+    setPriceHistory(data || [])
+    setLoadingHistory(false)
+  }
+
+  async function editListing(id, form, originalPrice) {
+    const newPrice = parseFloat(form.price)
+    const oldPrice = parseFloat(originalPrice)
+
+    if (newPrice !== oldPrice) {
+      await supabase.from('price_history').insert([{
+        listing_id: id,
+        price: oldPrice,
+        recorded_at: new Date().toISOString(),
+      }])
+    }
+
+    const now = new Date().toISOString()
+    await supabase.from('listings').update({
+      name: form.name,
+      description: form.description,
+      price: newPrice,
+      updated_at: now,
+    }).eq('id', id)
+
+    setListings((prev) => prev.map((l) =>
+      l.id === id ? { ...l, name: form.name, description: form.description, price: newPrice, updated_at: now } : l
+    ))
+    setListingToEdit(null)
+    setPriceHistory([])
+  }
+
   async function markAsSold(id) {
     await supabase.from('listings').update({ status: 'sold' }).eq('id', id)
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'sold' } : l)))
@@ -184,7 +299,7 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="max-w-4xl mx-auto px-4 py-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
 
         {/* Header */}
         <div className="flex items-center justify-between mb-8">
@@ -240,7 +355,7 @@ export default function App() {
 
         {/* Listings table */}
         <Card>
-          <CardContent className="p-0">
+          <CardContent className="p-0 overflow-x-auto">
             {loading ? (
               <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>
             ) : listings.length === 0 ? (
@@ -253,6 +368,8 @@ export default function App() {
                     <TableHead>Description</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
+                    <TableHead>Listed</TableHead>
+                    <TableHead>Updated</TableHead>
                     <TableHead />
                   </TableRow>
                 </TableHeader>
@@ -260,20 +377,35 @@ export default function App() {
                   {listings.map((listing) => (
                     <TableRow key={listing.id}>
                       <TableCell className="font-medium">{listing.name}</TableCell>
-                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                      <TableCell className="text-muted-foreground max-w-[160px] truncate">
                         {listing.description || '—'}
                       </TableCell>
                       <TableCell>${parseFloat(listing.price).toFixed(2)}</TableCell>
                       <TableCell>
                         <StatusBadge status={listing.status} />
                       </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {formatDate(listing.created_at)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground whitespace-nowrap">
+                        {formatDate(listing.updated_at)}
+                      </TableCell>
                       <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
+                        <div className="flex items-center justify-end gap-1">
                           {listing.status === 'active' && (
                             <Button variant="outline" onClick={() => markAsSold(listing.id)}>
                               Mark as Sold
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-foreground"
+                            onClick={() => openEditDialog(listing)}
+                            aria-label="Edit listing"
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </Button>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -296,6 +428,13 @@ export default function App() {
       </div>
 
       <AddListingDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={addListing} />
+      <EditListingDialog
+        listing={listingToEdit}
+        priceHistory={priceHistory}
+        loadingHistory={loadingHistory}
+        onSave={editListing}
+        onClose={() => { setListingToEdit(null); setPriceHistory([]) }}
+      />
       <DeleteConfirmDialog
         listing={listingToDelete}
         onConfirm={deleteListing}
