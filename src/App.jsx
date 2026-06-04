@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import {
   Dialog,
   DialogContent,
@@ -66,10 +65,6 @@ function AddListingDialog({ open, onOpenChange, onAdd }) {
             <Input id="name" value={form.name} onChange={set('name')} placeholder="e.g. Blue Sofa" required />
           </div>
           <div className="space-y-1.5">
-            <Label htmlFor="desc">Description</Label>
-            <Textarea id="desc" value={form.description} onChange={set('description')} placeholder="Condition, size, colour, etc." rows={3} />
-          </div>
-          <div className="space-y-1.5">
             <Label htmlFor="price">Asking Price ($) *</Label>
             <Input id="price" type="number" min="0" step="0.01" value={form.price} onChange={set('price')} placeholder="0.00" required />
           </div>
@@ -115,10 +110,6 @@ function EditListingDialog({ listing, priceHistory, loadingHistory, onSave, onCl
           <div className="space-y-1.5">
             <Label htmlFor="edit-name">Item Name *</Label>
             <Input id="edit-name" value={form.name} onChange={set('name')} required />
-          </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="edit-desc">Description</Label>
-            <Textarea id="edit-desc" value={form.description} onChange={set('description')} rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="edit-price">Price ($) *</Label>
@@ -365,7 +356,6 @@ export default function App() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Item</TableHead>
-                    <TableHead>Description</TableHead>
                     <TableHead>Price</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Listed</TableHead>
@@ -377,9 +367,6 @@ export default function App() {
                   {listings.map((listing) => (
                     <TableRow key={listing.id}>
                       <TableCell className="font-medium">{listing.name}</TableCell>
-                      <TableCell className="text-muted-foreground max-w-[160px] truncate">
-                        {listing.description || '—'}
-                      </TableCell>
                       <TableCell>${parseFloat(listing.price).toFixed(2)}</TableCell>
                       <TableCell>
                         <StatusBadge status={listing.status} />
