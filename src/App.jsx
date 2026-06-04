@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Sun, Moon, Plus } from 'lucide-react'
+import { Sun, Moon, Plus, Trash2 } from 'lucide-react'
 import { supabase, isConfigured } from './lib/supabase'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -12,6 +11,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from '@/components/ui/dialog'
 import {
   Table,
@@ -28,8 +29,7 @@ function useTheme() {
   )
 
   useEffect(() => {
-    const root = document.documentElement
-    root.classList.toggle('dark', theme === 'dark')
+    document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem('theme', theme)
   }, [theme])
 
@@ -59,46 +59,61 @@ function AddListingDialog({ open, onOpenChange, onAdd }) {
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label htmlFor="name">Item Name *</Label>
-            <Input
-              id="name"
-              value={form.name}
-              onChange={set('name')}
-              placeholder="e.g. Blue Sofa"
-              required
-            />
+            <Input id="name" value={form.name} onChange={set('name')} placeholder="e.g. Blue Sofa" required />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="desc">Description</Label>
-            <Textarea
-              id="desc"
-              value={form.description}
-              onChange={set('description')}
-              placeholder="Condition, size, colour, etc."
-              rows={3}
-            />
+            <Textarea id="desc" value={form.description} onChange={set('description')} placeholder="Condition, size, colour, etc." rows={3} />
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="price">Asking Price ($) *</Label>
-            <Input
-              id="price"
-              type="number"
-              min="0"
-              step="0.01"
-              value={form.price}
-              onChange={set('price')}
-              placeholder="0.00"
-              required
-            />
+            <Input id="price" type="number" min="0" step="0.01" value={form.price} onChange={set('price')} placeholder="0.00" required />
           </div>
           <div className="flex justify-end gap-2 pt-2">
-            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-              Cancel
-            </Button>
-            <Button type="submit" disabled={saving}>
-              {saving ? 'Adding…' : 'Add Listing'}
-            </Button>
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" disabled={saving}>{saving ? 'Adding…' : 'Add Listing'}</Button>
           </div>
         </form>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function DeleteConfirmDialog({ listing, onConfirm, onCancel }) {
+  const [deleting, setDeleting] = useState(false)
+  const isSold = listing?.status === 'sold'
+
+  const handleConfirm = async () => {
+    setDeleting(true)
+    await onConfirm(listing.id)
+    setDeleting(false)
+  }
+
+  return (
+    <Dialog open={!!listing} onOpenChange={(open) => { if (!open) onCancel() }}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Delete &ldquo;{listing?.name}&rdquo;?</DialogTitle>
+          <DialogDescription className="pt-2 text-base">
+            {isSold ? (
+              <>
+                This item was sold for{' '}
+                <span className="font-semibold text-foreground">
+                  ${parseFloat(listing?.price ?? 0).toFixed(2)}
+                </span>
+                . Deleting it will permanently remove it and reduce your total earned by that amount.
+              </>
+            ) : (
+              'This listing will be permanently removed. This action cannot be undone.'
+            )}
+          </DialogDescription>
+        </DialogHeader>
+        <DialogFooter className="gap-2 pt-2">
+          <Button variant="outline" onClick={onCancel} disabled={deleting}>Cancel</Button>
+          <Button variant="destructive" onClick={handleConfirm} disabled={deleting}>
+            {deleting ? 'Deleting…' : 'Yes, delete it'}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   )
@@ -122,7 +137,8 @@ export default function App() {
   const [theme, toggleTheme] = useTheme()
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
-  const [showDialog, setShowDialog] = useState(false)
+  const [showAddDialog, setShowAddDialog] = useState(false)
+  const [listingToDelete, setListingToDelete] = useState(null)
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); return }
@@ -145,13 +161,19 @@ export default function App() {
       .select()
     if (data) {
       setListings((prev) => [data[0], ...prev])
-      setShowDialog(false)
+      setShowAddDialog(false)
     }
   }
 
   async function markAsSold(id) {
     await supabase.from('listings').update({ status: 'sold' }).eq('id', id)
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'sold' } : l)))
+  }
+
+  async function deleteListing(id) {
+    await supabase.from('listings').delete().eq('id', id)
+    setListings((prev) => prev.filter((l) => l.id !== id))
+    setListingToDelete(null)
   }
 
   const activeCount = listings.filter((l) => l.status === 'active').length
@@ -169,7 +191,7 @@ export default function App() {
           <h1 className="text-2xl font-semibold tracking-tight">Marketplace Tracker</h1>
           <div className="flex items-center gap-2">
             {isConfigured && (
-              <Button onClick={() => setShowDialog(true)}>
+              <Button onClick={() => setShowAddDialog(true)}>
                 <Plus className="w-4 h-4 mr-1.5" />
                 Add Listing
               </Button>
@@ -192,9 +214,7 @@ export default function App() {
         <div className="grid grid-cols-3 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-1 pt-4 px-5">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Active Listings
-              </CardTitle>
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Active Listings</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <p className="text-3xl font-bold">{activeCount}</p>
@@ -202,9 +222,7 @@ export default function App() {
           </Card>
           <Card>
             <CardHeader className="pb-1 pt-4 px-5">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Sold
-              </CardTitle>
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Sold</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <p className="text-3xl font-bold">{soldCount}</p>
@@ -212,9 +230,7 @@ export default function App() {
           </Card>
           <Card>
             <CardHeader className="pb-1 pt-4 px-5">
-              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">
-                Total Earned
-              </CardTitle>
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Total Earned</CardTitle>
             </CardHeader>
             <CardContent className="px-5 pb-4">
               <p className="text-3xl font-bold text-primary">${totalEarned.toFixed(2)}</p>
@@ -228,9 +244,7 @@ export default function App() {
             {loading ? (
               <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>
             ) : listings.length === 0 ? (
-              <p className="text-center text-muted-foreground py-12 text-sm">
-                No listings yet. Add your first item!
-              </p>
+              <p className="text-center text-muted-foreground py-12 text-sm">No listings yet. Add your first item!</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -254,14 +268,22 @@ export default function App() {
                         <StatusBadge status={listing.status} />
                       </TableCell>
                       <TableCell className="text-right">
-                        {listing.status === 'active' && (
+                        <div className="flex items-center justify-end gap-2">
+                          {listing.status === 'active' && (
+                            <Button variant="outline" onClick={() => markAsSold(listing.id)}>
+                              Mark as Sold
+                            </Button>
+                          )}
                           <Button
-                            variant="outline"
-                            onClick={() => markAsSold(listing.id)}
+                            variant="ghost"
+                            size="icon"
+                            className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                            onClick={() => setListingToDelete(listing)}
+                            aria-label="Delete listing"
                           >
-                            Mark as Sold
+                            <Trash2 className="w-4 h-4" />
                           </Button>
-                        )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -273,10 +295,11 @@ export default function App() {
 
       </div>
 
-      <AddListingDialog
-        open={showDialog}
-        onOpenChange={setShowDialog}
-        onAdd={addListing}
+      <AddListingDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={addListing} />
+      <DeleteConfirmDialog
+        listing={listingToDelete}
+        onConfirm={deleteListing}
+        onCancel={() => setListingToDelete(null)}
       />
     </div>
   )

@@ -41,59 +41,57 @@
     --radius-2xl: calc(var(--radius) * 1.8);
 }
 
-/* ── Light mode: soft lavender-tinted pastels ── */
+/* ── Catppuccin Latte (light) ── */
 :root {
-    --background: oklch(0.97 0.012 290);
-    --foreground: oklch(0.2 0.03 290);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.2 0.03 290);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.2 0.03 290);
-    --primary: oklch(0.48 0.2 290);
-    --primary-foreground: oklch(0.99 0 0);
-    --secondary: oklch(0.93 0.03 290);
-    --secondary-foreground: oklch(0.3 0.08 290);
-    --muted: oklch(0.93 0.02 290);
-    --muted-foreground: oklch(0.52 0.06 290);
-    --accent: oklch(0.91 0.04 290);
-    --accent-foreground: oklch(0.3 0.08 290);
-    --destructive: oklch(0.6 0.22 25);
-    --border: oklch(0.88 0.03 290);
-    --input: oklch(0.88 0.03 290);
-    --ring: oklch(0.65 0.15 290);
+    --background: #eff1f5;
+    --foreground: #4c4f69;
+    --card: #e6e9ef;
+    --card-foreground: #4c4f69;
+    --popover: #e6e9ef;
+    --popover-foreground: #4c4f69;
+    --primary: #8839ef;
+    --primary-foreground: #eff1f5;
+    --secondary: #ccd0da;
+    --secondary-foreground: #4c4f69;
+    --muted: #ccd0da;
+    --muted-foreground: #6c6f85;
+    --accent: #bcc0cc;
+    --accent-foreground: #4c4f69;
+    --destructive: #d20f39;
+    --border: #9ca0b0;
+    --input: #9ca0b0;
+    --ring: #8839ef;
     --radius: 0.625rem;
-    /* status badge colours */
-    --badge-active-bg: oklch(0.9 0.1 145);
-    --badge-active-fg: oklch(0.3 0.12 145);
-    --badge-sold-bg: oklch(0.93 0.02 290);
-    --badge-sold-fg: oklch(0.52 0.06 290);
+    --badge-active-bg: #d4efcd;
+    --badge-active-fg: #40a02b;
+    --badge-sold-bg: #ccd0da;
+    --badge-sold-fg: #6c6f85;
 }
 
-/* ── Dark mode: deep navy-indigo pastels ── */
+/* ── Catppuccin Mocha (dark) ── */
 .dark {
-    --background: oklch(0.18 0.03 270);
-    --foreground: oklch(0.94 0.02 290);
-    --card: oklch(0.22 0.035 270);
-    --card-foreground: oklch(0.94 0.02 290);
-    --popover: oklch(0.22 0.035 270);
-    --popover-foreground: oklch(0.94 0.02 290);
-    --primary: oklch(0.75 0.15 290);
-    --primary-foreground: oklch(0.18 0.03 270);
-    --secondary: oklch(0.28 0.04 270);
-    --secondary-foreground: oklch(0.88 0.03 290);
-    --muted: oklch(0.28 0.04 270);
-    --muted-foreground: oklch(0.65 0.06 290);
-    --accent: oklch(0.3 0.05 270);
-    --accent-foreground: oklch(0.88 0.03 290);
-    --destructive: oklch(0.68 0.19 25);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 12%);
-    --ring: oklch(0.65 0.12 290);
-    /* status badge colours */
-    --badge-active-bg: oklch(0.3 0.1 145);
-    --badge-active-fg: oklch(0.8 0.12 145);
-    --badge-sold-bg: oklch(0.28 0.04 270);
-    --badge-sold-fg: oklch(0.65 0.06 290);
+    --background: #1e1e2e;
+    --foreground: #cdd6f4;
+    --card: #313244;
+    --card-foreground: #cdd6f4;
+    --popover: #313244;
+    --popover-foreground: #cdd6f4;
+    --primary: #cba6f7;
+    --primary-foreground: #1e1e2e;
+    --secondary: #45475a;
+    --secondary-foreground: #cdd6f4;
+    --muted: #313244;
+    --muted-foreground: #a6adc8;
+    --accent: #45475a;
+    --accent-foreground: #cdd6f4;
+    --destructive: #f38ba8;
+    --border: #585b70;
+    --input: #585b70;
+    --ring: #cba6f7;
+    --badge-active-bg: #1e3a28;
+    --badge-active-fg: #a6e3a1;
+    --badge-sold-bg: #45475a;
+    --badge-sold-fg: #a6adc8;
 }
 
 @layer base {
