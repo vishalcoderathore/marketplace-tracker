@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { toast, ToastContainer } from 'react-toastify'
 import { Sun, Moon, Plus, Trash2, Pencil, KeyRound, LogOut } from 'lucide-react'
 import { supabase, isConfigured } from './lib/supabase'
 import { Button } from '@/components/ui/button'
@@ -31,6 +32,18 @@ function useTheme() {
     localStorage.setItem('theme', theme)
   }, [theme])
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
+}
+
+function useToastPosition() {
+  const [position, setPosition] = useState(
+    () => window.innerWidth < 768 ? 'top-center' : 'bottom-right'
+  )
+  useEffect(() => {
+    const handler = () => setPosition(window.innerWidth < 768 ? 'top-center' : 'bottom-right')
+    window.addEventListener('resize', handler)
+    return () => window.removeEventListener('resize', handler)
+  }, [])
+  return position
 }
 
 // ── Auth utilities ─────────────────────────────────────────────────────────
@@ -370,6 +383,7 @@ function StatusBadge({ status }) {
 
 export default function App() {
   const [theme, toggleTheme] = useTheme()
+  const toastPosition = useToastPosition()
   const [authState, setAuthState] = useState('loading') // 'loading' | 'setup' | 'login' | 'authenticated'
   const [listings, setListings] = useState([])
   const [loading, setLoading] = useState(true)
@@ -410,7 +424,7 @@ export default function App() {
 
   async function addListing(form) {
     const { data } = await supabase.from('listings').insert([{ ...form, status: 'active' }]).select()
-    if (data) { setListings((prev) => [data[0], ...prev]); setShowAddDialog(false) }
+    if (data) { setListings((prev) => [data[0], ...prev]); setShowAddDialog(false); toast.success('Listing added!') }
   }
 
   async function openEditDialog(listing) {
@@ -432,17 +446,20 @@ export default function App() {
     setListings((prev) => prev.map((l) => l.id === id ? { ...l, name: form.name, price: newPrice, updated_at: now } : l))
     setListingToEdit(null)
     setPriceHistory([])
+    toast.info('Listing updated')
   }
 
   async function markAsSold(id) {
     await supabase.from('listings').update({ status: 'sold' }).eq('id', id)
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'sold' } : l)))
+    toast.success('Marked as sold!')
   }
 
   async function deleteListing(id) {
     await supabase.from('listings').delete().eq('id', id)
     setListings((prev) => prev.filter((l) => l.id !== id))
     setListingToDelete(null)
+    toast.success('Listing deleted')
   }
 
   const activeCount = listings.filter((l) => l.status === 'active').length
@@ -559,6 +576,13 @@ export default function App() {
         </Card>
       </div>
 
+      <ToastContainer
+        position={toastPosition}
+        theme={theme}
+        autoClose={3000}
+        closeOnClick
+        pauseOnHover
+      />
       <AddListingDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={addListing} />
       <EditListingDialog listing={listingToEdit} priceHistory={priceHistory} loadingHistory={loadingHistory} onSave={editListing} onClose={() => { setListingToEdit(null); setPriceHistory([]) }} />
       <DeleteConfirmDialog listing={listingToDelete} onConfirm={deleteListing} onCancel={() => setListingToDelete(null)} />

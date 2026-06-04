@@ -94,6 +94,38 @@
     --badge-sold-fg: #a6adc8;
 }
 
+/* ── react-toastify: Catppuccin Latte (light) ── */
+:root {
+  --toastify-color-light: #e6e9ef;
+  --toastify-text-color-light: #4c4f69;
+  --toastify-color-success: #40a02b;
+  --toastify-color-info: #1e66f5;
+  --toastify-color-error: #d20f39;
+  --toastify-icon-color-success: #40a02b;
+  --toastify-icon-color-info: #1e66f5;
+  --toastify-icon-color-error: #d20f39;
+  --toastify-color-progress-success: #40a02b;
+  --toastify-color-progress-info: #1e66f5;
+  --toastify-color-progress-error: #d20f39;
+  --toastify-toast-bd-radius: 0.75rem;
+  --toastify-toast-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+/* ── react-toastify: Catppuccin Mocha (dark) ── */
+.dark {
+  --toastify-color-dark: #313244;
+  --toastify-text-color-dark: #cdd6f4;
+  --toastify-color-success: #a6e3a1;
+  --toastify-color-info: #89b4fa;
+  --toastify-color-error: #f38ba8;
+  --toastify-icon-color-success: #a6e3a1;
+  --toastify-icon-color-info: #89b4fa;
+  --toastify-icon-color-error: #f38ba8;
+  --toastify-color-progress-success: #a6e3a1;
+  --toastify-color-progress-info: #89b4fa;
+  --toastify-color-progress-error: #f38ba8;
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
