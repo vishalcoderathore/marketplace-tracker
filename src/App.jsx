@@ -213,27 +213,27 @@ export default function App() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-4 mb-8">
           <Card>
-            <CardHeader className="pb-1 pt-4 px-5">
+            <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
               <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Active Listings</CardTitle>
             </CardHeader>
-            <CardContent className="px-5 pb-4">
-              <p className="text-3xl font-bold">{activeCount}</p>
+            <CardContent className="px-3 sm:px-5 pb-4 overflow-hidden">
+              <p className="text-xl sm:text-3xl font-bold truncate">{activeCount}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1 pt-4 px-5">
+            <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
               <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Sold</CardTitle>
             </CardHeader>
-            <CardContent className="px-5 pb-4">
-              <p className="text-3xl font-bold">{soldCount}</p>
+            <CardContent className="px-3 sm:px-5 pb-4 overflow-hidden">
+              <p className="text-xl sm:text-3xl font-bold truncate">{soldCount}</p>
             </CardContent>
           </Card>
           <Card>
-            <CardHeader className="pb-1 pt-4 px-5">
+            <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
               <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Total Earned</CardTitle>
             </CardHeader>
-            <CardContent className="px-5 pb-4">
-              <p className="text-3xl font-bold text-primary">${totalEarned.toFixed(2)}</p>
+            <CardContent className="px-3 sm:px-5 pb-4 overflow-hidden">
+              <p className="text-xl sm:text-3xl font-bold text-primary truncate">${totalEarned.toFixed(2)}</p>
             </CardContent>
           </Card>
         </div>
