@@ -1,16 +1,20 @@
-# React + Vite
+# Marketplace Tracker
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A simple personal web app to keep track of items you are selling on Facebook Marketplace.
 
-Currently, two official plugins are available:
+## What it does
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+- Add items you have listed for sale, with a name and asking price.
+- See all your listings in one place with their current status — Active or Sold.
+- Mark an item as sold when a buyer completes the purchase.
+- Edit an item's name or price at any time. If you change the price, the app keeps a history of previous prices so you can see how it changed over time.
+- Delete a listing you no longer need. If the item was sold, removing it will also reduce your total earnings figure accordingly.
+- A summary at the top shows how many listings are active, how many have sold, and the total amount earned from sold items.
+- The app is protected by a password. You can change the password from within the app at any time.
+- Supports light and dark mode.
 
-## React Compiler
+## Tech stack
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+- React, TypeScript, Vite
+- Supabase for the database
+- Deployed on Vercel
