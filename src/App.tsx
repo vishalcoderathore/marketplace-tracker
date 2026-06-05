@@ -23,10 +23,39 @@ import {
   TableRow,
 } from '@/components/ui/table'
 
+// ── Types ──────────────────────────────────────────────────────────────────
+
+type Theme = 'light' | 'dark'
+type AuthState = 'loading' | 'setup' | 'login' | 'authenticated'
+type ToastPosition = 'top-center' | 'bottom-right'
+
+interface Listing {
+  id: string
+  name: string
+  price: number
+  status: 'active' | 'sold'
+  created_at: string
+  updated_at: string | null
+}
+
+interface PriceHistoryEntry {
+  id: string
+  listing_id: string
+  price: number
+  recorded_at: string
+}
+
+interface ListingForm {
+  name: string
+  price: string
+}
+
 // ── Theme ──────────────────────────────────────────────────────────────────
 
-function useTheme() {
-  const [theme, setTheme] = useState(() => localStorage.getItem('theme') || 'light')
+function useTheme(): [Theme, () => void] {
+  const [theme, setTheme] = useState<Theme>(
+    () => (localStorage.getItem('theme') as Theme) || 'light'
+  )
   useEffect(() => {
     document.documentElement.classList.toggle('dark', theme === 'dark')
     localStorage.setItem('theme', theme)
@@ -34,12 +63,13 @@ function useTheme() {
   return [theme, () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))]
 }
 
-function useToastPosition() {
-  const [position, setPosition] = useState(
-    () => window.innerWidth < 768 ? 'top-center' : 'bottom-right'
+function useToastPosition(): ToastPosition {
+  const [position, setPosition] = useState<ToastPosition>(
+    () => (window.innerWidth < 768 ? 'top-center' : 'bottom-right')
   )
   useEffect(() => {
-    const handler = () => setPosition(window.innerWidth < 768 ? 'top-center' : 'bottom-right')
+    const handler = () =>
+      setPosition(window.innerWidth < 768 ? 'top-center' : 'bottom-right')
     window.addEventListener('resize', handler)
     return () => window.removeEventListener('resize', handler)
   }, [])
@@ -51,31 +81,31 @@ function useToastPosition() {
 const SESSION_KEY = 'mkt_tracker_auth'
 const SESSION_DURATION = 30 * 24 * 60 * 60 * 1000
 
-function getSession() {
+function getSession(): boolean {
   try {
     const raw = localStorage.getItem(SESSION_KEY)
     if (!raw) return false
-    const { expiresAt } = JSON.parse(raw)
+    const { expiresAt } = JSON.parse(raw) as { expiresAt: number }
     if (Date.now() > expiresAt) { localStorage.removeItem(SESSION_KEY); return false }
     return true
   } catch { return false }
 }
 
-function setSession() {
+function setSession(): void {
   localStorage.setItem(SESSION_KEY, JSON.stringify({ expiresAt: Date.now() + SESSION_DURATION }))
 }
 
-function clearSession() {
+function clearSession(): void {
   localStorage.removeItem(SESSION_KEY)
 }
 
-async function hashPassword(salt, password) {
+async function hashPassword(salt: string, password: string): Promise<string> {
   const data = new TextEncoder().encode(salt + password)
   const hashBuffer = await crypto.subtle.digest('SHA-256', data)
   return Array.from(new Uint8Array(hashBuffer)).map((b) => b.toString(16).padStart(2, '0')).join('')
 }
 
-function generateSalt() {
+function generateSalt(): string {
   const array = new Uint8Array(16)
   crypto.getRandomValues(array)
   return Array.from(array).map((b) => b.toString(16).padStart(2, '0')).join('')
@@ -83,20 +113,20 @@ function generateSalt() {
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
-function formatDate(dateStr) {
+function formatDate(dateStr: string | null): string {
   if (!dateStr) return '—'
   return new Date(dateStr).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 // ── Auth screens ───────────────────────────────────────────────────────────
 
-function SetupScreen({ onSetup }) {
+function SetupScreen({ onSetup }: { onSetup: () => void }) {
   const [password, setPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirm) { setError('Passwords do not match'); return }
     if (password.length < 4) { setError('Password must be at least 4 characters'); return }
@@ -137,16 +167,20 @@ function SetupScreen({ onSetup }) {
   )
 }
 
-function LoginScreen({ onLogin }) {
+function LoginScreen({ onLogin }: { onLogin: () => void }) {
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setLoading(true)
     setError('')
-    const { data } = await supabase.from('app_settings').select('password_hash, password_salt').eq('id', 1).single()
+    const { data } = await supabase
+      .from('app_settings')
+      .select('password_hash, password_salt')
+      .eq('id', 1)
+      .single()
     if (!data) { setError('App not configured.'); setLoading(false); return }
     const hash = await hashPassword(data.password_salt, password)
     if (hash === data.password_hash) {
@@ -184,25 +218,23 @@ function LoginScreen({ onLogin }) {
 
 // ── App dialogs ────────────────────────────────────────────────────────────
 
-function ChangePasswordDialog({ open, onOpenChange }) {
+function ChangePasswordDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
   const [form, setForm] = useState({ current: '', next: '', confirm: '' })
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const set = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }))
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (form.next !== form.confirm) { setError('New passwords do not match'); return }
     if (form.next.length < 4) { setError('Password must be at least 4 characters'); return }
     setSaving(true)
     setError('')
     const { data } = await supabase.from('app_settings').select('password_hash, password_salt').eq('id', 1).single()
+    if (!data) { setError('Could not load settings.'); setSaving(false); return }
     const currentHash = await hashPassword(data.password_salt, form.current)
-    if (currentHash !== data.password_hash) {
-      setError('Current password is incorrect.')
-      setSaving(false)
-      return
-    }
+    if (currentHash !== data.password_hash) { setError('Current password is incorrect.'); setSaving(false); return }
     const newSalt = generateSalt()
     const newHash = await hashPassword(newSalt, form.next)
     await supabase.from('app_settings').update({ password_hash: newHash, password_salt: newSalt }).eq('id', 1)
@@ -214,9 +246,7 @@ function ChangePasswordDialog({ open, onOpenChange }) {
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) setError(''); onOpenChange(o) }}>
       <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Change Password</DialogTitle>
-        </DialogHeader>
+        <DialogHeader><DialogTitle>Change Password</DialogTitle></DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4 pt-2">
           <div className="space-y-1.5">
             <Label>Current Password</Label>
@@ -241,15 +271,24 @@ function ChangePasswordDialog({ open, onOpenChange }) {
   )
 }
 
-function AddListingDialog({ open, onOpenChange, onAdd }) {
-  const [form, setForm] = useState({ name: '', price: '' })
+function AddListingDialog({
+  open,
+  onOpenChange,
+  onAdd,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onAdd: (form: { name: string; price: number }) => Promise<void>
+}) {
+  const [form, setForm] = useState<ListingForm>({ name: '', price: '' })
   const [saving, setSaving] = useState(false)
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const set = (field: keyof ListingForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }))
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setSaving(true)
-    await onAdd({ ...form, price: parseFloat(form.price) })
+    await onAdd({ name: form.name, price: parseFloat(form.price) })
     setForm({ name: '', price: '' })
     setSaving(false)
   }
@@ -277,17 +316,31 @@ function AddListingDialog({ open, onOpenChange, onAdd }) {
   )
 }
 
-function EditListingDialog({ listing, priceHistory, loadingHistory, onSave, onClose }) {
-  const [form, setForm] = useState({ name: '', price: '' })
+function EditListingDialog({
+  listing,
+  priceHistory,
+  loadingHistory,
+  onSave,
+  onClose,
+}: {
+  listing: Listing | null
+  priceHistory: PriceHistoryEntry[]
+  loadingHistory: boolean
+  onSave: (id: string, form: ListingForm, originalPrice: number) => Promise<void>
+  onClose: () => void
+}) {
+  const [form, setForm] = useState<ListingForm>({ name: '', price: '' })
   const [saving, setSaving] = useState(false)
-  const set = (field) => (e) => setForm((f) => ({ ...f, [field]: e.target.value }))
+  const set = (field: keyof ListingForm) => (e: React.ChangeEvent<HTMLInputElement>) =>
+    setForm((f) => ({ ...f, [field]: e.target.value }))
 
   useEffect(() => {
-    if (listing) setForm({ name: listing.name, price: parseFloat(listing.price).toFixed(2) })
+    if (listing) setForm({ name: listing.name, price: parseFloat(String(listing.price)).toFixed(2) })
   }, [listing])
 
-  const handleSubmit = async (e) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (!listing) return
     setSaving(true)
     await onSave(listing.id, form, listing.price)
     setSaving(false)
@@ -314,7 +367,7 @@ function EditListingDialog({ listing, priceHistory, loadingHistory, onSave, onCl
               <div className="rounded-lg border border-border divide-y divide-border">
                 {priceHistory.map((entry) => (
                   <div key={entry.id} className="flex items-center justify-between px-3 py-2">
-                    <s className="text-muted-foreground">${parseFloat(entry.price).toFixed(2)}</s>
+                    <s className="text-muted-foreground">${parseFloat(String(entry.price)).toFixed(2)}</s>
                     <span className="text-sm text-muted-foreground">{formatDate(entry.recorded_at)}</span>
                   </div>
                 ))}
@@ -331,11 +384,20 @@ function EditListingDialog({ listing, priceHistory, loadingHistory, onSave, onCl
   )
 }
 
-function DeleteConfirmDialog({ listing, onConfirm, onCancel }) {
+function DeleteConfirmDialog({
+  listing,
+  onConfirm,
+  onCancel,
+}: {
+  listing: Listing | null
+  onConfirm: (id: string) => Promise<void>
+  onCancel: () => void
+}) {
   const [deleting, setDeleting] = useState(false)
   const isSold = listing?.status === 'sold'
 
   const handleConfirm = async () => {
+    if (!listing) return
     setDeleting(true)
     await onConfirm(listing.id)
     setDeleting(false)
@@ -348,7 +410,7 @@ function DeleteConfirmDialog({ listing, onConfirm, onCancel }) {
           <DialogTitle>Delete &ldquo;{listing?.name}&rdquo;?</DialogTitle>
           <DialogDescription className="pt-2 text-base">
             {isSold ? (
-              <>This item was sold for <span className="font-semibold text-foreground">${parseFloat(listing?.price ?? 0).toFixed(2)}</span>. Deleting it will permanently remove it and reduce your total earned by that amount.</>
+              <>This item was sold for <span className="font-semibold text-foreground">${parseFloat(String(listing?.price ?? 0)).toFixed(2)}</span>. Deleting it will permanently remove it and reduce your total earned by that amount.</>
             ) : (
               'This listing will be permanently removed. This action cannot be undone.'
             )}
@@ -365,7 +427,7 @@ function DeleteConfirmDialog({ listing, onConfirm, onCancel }) {
   )
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status }: { status: 'active' | 'sold' }) {
   return (
     <span
       className="inline-flex items-center rounded-full px-2.5 py-1 text-sm font-medium"
@@ -384,14 +446,14 @@ function StatusBadge({ status }) {
 export default function App() {
   const [theme, toggleTheme] = useTheme()
   const toastPosition = useToastPosition()
-  const [authState, setAuthState] = useState('loading') // 'loading' | 'setup' | 'login' | 'authenticated'
-  const [listings, setListings] = useState([])
+  const [authState, setAuthState] = useState<AuthState>('loading')
+  const [listings, setListings] = useState<Listing[]>([])
   const [loading, setLoading] = useState(true)
   const [showAddDialog, setShowAddDialog] = useState(false)
   const [showChangePassword, setShowChangePassword] = useState(false)
-  const [listingToDelete, setListingToDelete] = useState(null)
-  const [listingToEdit, setListingToEdit] = useState(null)
-  const [priceHistory, setPriceHistory] = useState([])
+  const [listingToDelete, setListingToDelete] = useState<Listing | null>(null)
+  const [listingToEdit, setListingToEdit] = useState<Listing | null>(null)
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryEntry[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
 
   useEffect(() => {
@@ -418,26 +480,26 @@ export default function App() {
 
   async function fetchListings() {
     const { data } = await supabase.from('listings').select('*').order('created_at', { ascending: false })
-    setListings(data || [])
+    setListings((data as Listing[]) || [])
     setLoading(false)
   }
 
-  async function addListing(form) {
+  async function addListing(form: { name: string; price: number }) {
     const { data } = await supabase.from('listings').insert([{ ...form, status: 'active' }]).select()
-    if (data) { setListings((prev) => [data[0], ...prev]); setShowAddDialog(false); toast.success('Listing added!') }
+    if (data) { setListings((prev) => [data[0] as Listing, ...prev]); setShowAddDialog(false); toast.success('Listing added!') }
   }
 
-  async function openEditDialog(listing) {
+  async function openEditDialog(listing: Listing) {
     setListingToEdit(listing)
     setLoadingHistory(true)
     const { data } = await supabase.from('price_history').select('*').eq('listing_id', listing.id).order('recorded_at', { ascending: false })
-    setPriceHistory(data || [])
+    setPriceHistory((data as PriceHistoryEntry[]) || [])
     setLoadingHistory(false)
   }
 
-  async function editListing(id, form, originalPrice) {
+  async function editListing(id: string, form: ListingForm, originalPrice: number) {
     const newPrice = parseFloat(form.price)
-    const oldPrice = parseFloat(originalPrice)
+    const oldPrice = parseFloat(String(originalPrice))
     if (newPrice !== oldPrice) {
       await supabase.from('price_history').insert([{ listing_id: id, price: oldPrice, recorded_at: new Date().toISOString() }])
     }
@@ -449,13 +511,13 @@ export default function App() {
     toast.info('Listing updated')
   }
 
-  async function markAsSold(id) {
+  async function markAsSold(id: string) {
     await supabase.from('listings').update({ status: 'sold' }).eq('id', id)
     setListings((prev) => prev.map((l) => (l.id === id ? { ...l, status: 'sold' } : l)))
     toast.success('Marked as sold!')
   }
 
-  async function deleteListing(id) {
+  async function deleteListing(id: string) {
     await supabase.from('listings').delete().eq('id', id)
     setListings((prev) => prev.filter((l) => l.id !== id))
     setListingToDelete(null)
@@ -464,9 +526,8 @@ export default function App() {
 
   const activeCount = listings.filter((l) => l.status === 'active').length
   const soldCount = listings.filter((l) => l.status === 'sold').length
-  const totalEarned = listings.filter((l) => l.status === 'sold').reduce((sum, l) => sum + parseFloat(l.price), 0)
+  const totalEarned = listings.filter((l) => l.status === 'sold').reduce((sum, l) => sum + parseFloat(String(l.price)), 0)
 
-  // ── Auth gate ──────────────────────────────────────────────────────────
   if (authState === 'loading') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -477,7 +538,6 @@ export default function App() {
   if (authState === 'setup') return <SetupScreen onSetup={handleAuthSuccess} />
   if (authState === 'login') return <LoginScreen onLogin={handleAuthSuccess} />
 
-  // ── Authenticated app ──────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-8">
@@ -550,7 +610,7 @@ export default function App() {
                   {listings.map((listing) => (
                     <TableRow key={listing.id}>
                       <TableCell className="font-medium">{listing.name}</TableCell>
-                      <TableCell>${parseFloat(listing.price).toFixed(2)}</TableCell>
+                      <TableCell>${parseFloat(String(listing.price)).toFixed(2)}</TableCell>
                       <TableCell><StatusBadge status={listing.status} /></TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(listing.created_at)}</TableCell>
                       <TableCell className="text-muted-foreground whitespace-nowrap">{formatDate(listing.updated_at)}</TableCell>
@@ -576,13 +636,7 @@ export default function App() {
         </Card>
       </div>
 
-      <ToastContainer
-        position={toastPosition}
-        theme={theme}
-        autoClose={3000}
-        closeOnClick
-        pauseOnHover
-      />
+      <ToastContainer position={toastPosition} theme={theme} autoClose={3000} closeOnClick pauseOnHover />
       <AddListingDialog open={showAddDialog} onOpenChange={setShowAddDialog} onAdd={addListing} />
       <EditListingDialog listing={listingToEdit} priceHistory={priceHistory} loadingHistory={loadingHistory} onSave={editListing} onClose={() => { setListingToEdit(null); setPriceHistory([]) }} />
       <DeleteConfirmDialog listing={listingToDelete} onConfirm={deleteListing} onCancel={() => setListingToDelete(null)} />
