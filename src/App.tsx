@@ -528,6 +528,7 @@ export default function App() {
   const activeCount = listings.filter((l) => l.status === 'active').length
   const soldCount = listings.filter((l) => l.status === 'sold').length
   const totalEarned = listings.filter((l) => l.status === 'sold').reduce((sum, l) => sum + parseFloat(String(l.price)), 0)
+  const futureEarnings = listings.filter((l) => l.status === 'active').reduce((sum, l) => sum + parseFloat(String(l.price)), 0)
   const filteredListings = statusFilter === 'all' ? listings : listings.filter((l) => l.status === statusFilter)
 
   if (authState === 'loading') {
@@ -563,7 +564,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
               <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Active Listings</CardTitle>
@@ -586,6 +587,14 @@ export default function App() {
             </CardHeader>
             <CardContent className="px-3 sm:px-5 pb-4 overflow-hidden">
               <p className="text-xl sm:text-3xl font-bold text-primary truncate">${totalEarned.toFixed(2)}</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
+              <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Future Earnings</CardTitle>
+            </CardHeader>
+            <CardContent className="px-3 sm:px-5 pb-4 overflow-hidden">
+              <p className="text-xl sm:text-3xl font-bold truncate">${futureEarnings.toFixed(2)}</p>
             </CardContent>
           </Card>
         </div>
