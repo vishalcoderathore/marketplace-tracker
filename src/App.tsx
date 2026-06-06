@@ -544,7 +544,7 @@ export default function App() {
     <div className="min-h-screen bg-background">
       <div className="max-w-5xl mx-auto px-4 py-8">
 
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8 gap-3">
           <h1 className="text-2xl font-semibold tracking-tight">Marketplace Tracker</h1>
           <div className="flex items-center gap-2">
             <Button onClick={() => setShowAddDialog(true)}>
@@ -563,7 +563,7 @@ export default function App() {
           </div>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 mb-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
           <Card>
             <CardHeader className="pb-1 pt-4 px-3 sm:px-5">
               <CardTitle className="text-sm font-medium uppercase tracking-wide text-muted-foreground">Active Listings</CardTitle>
