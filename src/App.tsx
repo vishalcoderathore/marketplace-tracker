@@ -455,6 +455,7 @@ export default function App() {
   const [listingToEdit, setListingToEdit] = useState<Listing | null>(null)
   const [priceHistory, setPriceHistory] = useState<PriceHistoryEntry[]>([])
   const [loadingHistory, setLoadingHistory] = useState(false)
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'sold'>('all')
 
   useEffect(() => {
     if (!isConfigured) { setLoading(false); setAuthState('authenticated'); return }
@@ -527,6 +528,7 @@ export default function App() {
   const activeCount = listings.filter((l) => l.status === 'active').length
   const soldCount = listings.filter((l) => l.status === 'sold').length
   const totalEarned = listings.filter((l) => l.status === 'sold').reduce((sum, l) => sum + parseFloat(String(l.price)), 0)
+  const filteredListings = statusFilter === 'all' ? listings : listings.filter((l) => l.status === statusFilter)
 
   if (authState === 'loading') {
     return (
@@ -589,11 +591,24 @@ export default function App() {
         </div>
 
         <Card>
+          <div className="flex items-center justify-end px-4 py-3 border-b border-border">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'sold')}
+              className="h-8 rounded-md border border-input bg-background px-2.5 py-1 text-sm text-foreground shadow-sm focus:outline-none focus:ring-1 focus:ring-ring cursor-pointer"
+            >
+              <option value="all">All</option>
+              <option value="active">Active</option>
+              <option value="sold">Sold</option>
+            </select>
+          </div>
           <CardContent className="p-0 overflow-x-auto">
             {loading ? (
               <p className="text-center text-muted-foreground py-12 text-sm">Loading…</p>
             ) : listings.length === 0 ? (
               <p className="text-center text-muted-foreground py-12 text-sm">No listings yet. Add your first item!</p>
+            ) : filteredListings.length === 0 ? (
+              <p className="text-center text-muted-foreground py-12 text-sm">No {statusFilter} listings.</p>
             ) : (
               <Table>
                 <TableHeader>
@@ -607,7 +622,7 @@ export default function App() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {listings.map((listing) => (
+                  {filteredListings.map((listing) => (
                     <TableRow key={listing.id}>
                       <TableCell className="font-medium">{listing.name}</TableCell>
                       <TableCell>${parseFloat(String(listing.price)).toFixed(2)}</TableCell>
